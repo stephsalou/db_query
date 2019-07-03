@@ -1,0 +1,11 @@
+{
+    "name": "steph/framework_php",
+    "license": "GNU",
+    "authors": [
+        {
+            "name": "steph salou",
+            "email": "saloustephane123@gmail.com"
+        }
+    ],
+    "require": {}
+}
