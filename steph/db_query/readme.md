@@ -2,7 +2,7 @@
 
 db_query is a simple sql query creator .this is a simple and extensible library to write and execute sql query
 
-db_query  requires PHP >= 5.3.3.
+db_query  requires PHP >= 7.2.
 
 ## Table of Contents
 
