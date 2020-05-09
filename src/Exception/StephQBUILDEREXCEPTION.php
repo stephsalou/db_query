@@ -6,13 +6,16 @@
  * Time: 14:21
  */
 namespace steph\db_query\Exception;
-trait Database_Exception
+class StephQBUILDEREXCEPTION extends \Exception
 {
+    /**
+     * @var \Exception $e
+     */
     public $e;
 
-    public function Error($error, $message = null)
+    public function Error($error, $message = null): \Exception
     {
-        if (is_null($message) && empty($message)) {
+        if ($message === null && empty($message)) {
             switch ($error) {
                 case 0:
                     $this->e = new \Exception('must be give an sql a empty string given',1);
@@ -35,19 +38,11 @@ trait Database_Exception
             }
         } else {
             switch ($error) {
-                case 0:
-                    $this->e = new \Exception($message,1);
-                    break;
                 case 1:
-                    $this->e = new \Exception($message,1);
-                    break;
                 case 2:
-                    $this->e = new \Exception($message,1);
-                    break;
                 case 3:
-                    $this->e = new \Exception($message,1);
-                    break;
                 case 4:
+                case 0:
                     $this->e = new \Exception($message,1);
                     break;
                 default:

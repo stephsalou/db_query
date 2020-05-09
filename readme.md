@@ -1,4 +1,4 @@
-# db_query
+# db_query 🌋🌋🌋
 
 db_query is a simple sql query creator .this is a simple and extensible library to write and execute sql query
 
@@ -44,3 +44,4 @@ if you want to select all line:
 ```
 $query->select('*')->from('user')->run_fetch(true)->getResult();
 ```
+if you want to select first line:

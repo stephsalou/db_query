@@ -1,11 +1,17 @@
 {
-    "name": "steph/framework_php",
-    "license": "GNU",
+    "name": "stephane/db_query",
+    "description": "Simple PHP query builder",
+    "type": "library",
+    "license": "MIT",
     "authors": [
         {
-            "name": "steph salou",
-            "email": "saloustephane123@gmail.com"
+            "name": "stepahane salou",
+            "email": "anonymex1@outlook.com",
+            "role": "Developer"
         }
     ],
-    "require": {}
+    "minimum-stability": "dev",
+    "require": {
+      "ext-pdo": "*"
+    }
 }
