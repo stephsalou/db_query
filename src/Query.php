@@ -9,7 +9,9 @@
 namespace steph\db_query;
 
 use Exception;
+use PDO;
 use PDOException;
+use steph\db_query\Entity\User;
 use steph\db_query\Exception\StephQBUILDEREXCEPTION;
 
 class Query
@@ -32,10 +34,12 @@ class Query
             $name = (array_key_exists('name', $config) && !empty($config['name'])) ? $config['name'] : getenv('DATABASE_NAME');
             $user = (array_key_exists('user', $config) && !empty($config['user'])) ? $config['user'] : getenv('DATABASE_USER');
             $password = (array_key_exists('password', $config) && !empty($config['password'])) ? $config['password'] : getenv('DATABASE_PASSWORD');
-            $this->DB = new \PDO('mysql:host=' . $host . ';dbname=' . $name . ';charset=utf8', $user, $password, array(
-                \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_OBJ,
-                \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION
-            ));
+            $dataToDump = [$host,$name,$user,$password];
+            var_dump($dataToDump);
+            $this->DB = new PDO('mysql:host=' . $host . ';dbname=' . $name . ';charset=utf8', $user, $password, [
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_OBJ,
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+            ]);
         } catch (PDOException $e) {
             throw $e;
         }
@@ -249,14 +253,14 @@ class Query
             if ($all) {
                 if ($this->sql !== '' && !empty($this->DB)) :
                     $statement = $this->DB->query($this->sql);
-                    $this->result = ($statement) ? $statement->fetchAll() : false;
+                    $this->result = ($statement) ? $statement->fetchAll(PDO::FETCH_CLASS,User::class) : false;
                 else :
                     throw new StephQBUILDEREXCEPTION('must have a sql query to run it');
                 endif;
             } else {
                 if ($this->sql !== '' && !empty($this->DB)):
                     $statement = $this->DB->query($this->sql);
-                    $this->result = ($statement) ? $statement->fetch() : false;
+                    $this->result = ($statement) ? $statement->fetchObject(\stdClass::class) : false;
                 else :
                     throw new StephQBUILDEREXCEPTION('must have a sql query to run it');
                 endif;
@@ -293,7 +297,7 @@ class Query
     /**
      * @return mixed
      */
-    public function getDB(): \PDO
+    public function getDB(): PDO
     {
         return $this->DB;
     }

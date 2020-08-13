@@ -13,5 +13,14 @@
     "minimum-stability": "dev",
     "require": {
       "ext-pdo": "*"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "steph\\db_query\\": "src/",
+            "\\Test\\Query\\": "Test/"
+        }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.2@dev"
     }
 }
