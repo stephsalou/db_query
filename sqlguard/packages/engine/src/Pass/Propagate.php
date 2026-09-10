@@ -25,18 +25,55 @@ use SqlGuard\Engine\Domain\Taint;
  */
 final class Propagate
 {
-    /** @var list<Alert> */
+    /** @var array<string,Alert> indexe par identite : un sink = une alerte (AD-9) */
     private array $alerts = [];
-    /** @var array<string,int> compteur d'ordinal par symbole+kind (AD-5) */
-    private array $ordinals = [];
+    private ?SinkIndex $sinkIndex = null;
+    private bool $emit = true;
+    /** @var array<string,\SqlGuard\Engine\Domain\FunctionSummary> */
+    private array $summaries = [];
+    /** Sinks atteints par le parametre en cours d'analyse, en mode resume. */
+    private array $collectedSinks = [];
+    private bool $returnReached = false;
 
     public function __construct(
         private readonly RulePack $rulePack,
         private readonly LimitRecorder $limits,
+        private readonly ?SymbolTable $symbols = null,
     ) {}
 
     /** @return list<Alert> */
-    public function alerts(): array { return $this->alerts; }
+    public function alerts(): array
+    {
+        $a = $this->alerts;
+        ksort($a); // determinisme (NFR-1)
+        return array_values($a);
+    }
+
+    /** @param array<string,\SqlGuard\Engine\Domain\FunctionSummary> $summaries */
+    public function withSummaries(array $summaries): void
+    {
+        $this->summaries = $summaries;
+    }
+
+    /**
+     * Analyse un symbole avec un etat initial impose, sans emettre d'alerte :
+     * sert au calcul des resumes (AD-6).
+     * @param list<Node> $stmts
+     * @return array{reaches_return:bool,sinks:list<SinkRef>}
+     */
+    public function collectFor(string $fqn, array $stmts, string $file, TaintState $state): array
+    {
+        $prevEmit = $this->emit;
+        $prevIdx = $this->sinkIndex;
+        $this->emit = false;
+        $this->collectedSinks = [];
+        $this->returnReached = false;
+        $this->sinkIndex = new SinkIndex($stmts);
+        $this->walk($stmts, $state, $fqn, $file);
+        $this->emit = $prevEmit;
+        $this->sinkIndex = $prevIdx;
+        return ['reaches_return' => $this->returnReached, 'sinks' => $this->collectedSinks];
+    }
 
     /** @param list<Node> $ast */
     public function analyseFile(array $ast, string $canonicalFile): void
@@ -49,7 +86,9 @@ final class Propagate
                     $state->set(AccessPath::variable($p->var->name), Taint::unknown());
                 }
             }
+            $this->sinkIndex = new SinkIndex($stmts);
             $this->walk($stmts, $state, $fqn, $canonicalFile);
+            $this->sinkIndex = null;
         }
     }
 
@@ -188,7 +227,8 @@ final class Propagate
             // La valeur sort du symbole : l'evaluer consigne les appels non
             // suivis, sinon un `return mystere($_GET[...])` passerait pour une
             // analyse complete alors qu'elle ne l'est pas (NFR-6).
-            $this->evaluate($stmt->expr, $state, $fqn, $file);
+            $rt = $this->evaluate($stmt->expr, $state, $fqn, $file);
+            if ($rt->isTainted()) { $this->returnReached = true; }
             return $state;
         }
         if ($stmt instanceof Stmt\Echo_) {
@@ -349,6 +389,12 @@ final class Propagate
                     }
                     return $t;
                 }
+                // Interprocedural (AD-6) : si le symbole appele est connu et
+                // resume, on applique son resume au lieu de renoncer.
+                $callee = $this->symbols?->resolveFunction($e->name->toString());
+                if ($callee !== null && isset($this->summaries[$callee])) {
+                    return $this->applySummary($this->summaries[$callee], $e, $state, $fqn, $file);
+                }
                 $this->limits->record(
                     LimitRecorder::UNKNOWN_CALLEE,
                     "appel non suivi : $fn()",
@@ -370,6 +416,10 @@ final class Propagate
                 || isset(Vocabulary::SINK_METHODS[$m])) {
                 // Methode base connue : le resultat n'est pas une valeur SQL.
                 return Taint::clean();
+            }
+            $calleeM = $this->symbols?->resolveMethod($e->name->toString());
+            if ($calleeM !== null && isset($this->summaries[$calleeM])) {
+                return $this->applySummary($this->summaries[$calleeM], $e, $state, $fqn, $file);
             }
             $this->limits->record(
                 LimitRecorder::UNKNOWN_CALLEE,
@@ -415,7 +465,7 @@ final class Propagate
             if ($isEscaper && $this->rulePack->has('sanitizer-noop')) {
                 $this->emit('sanitizer-noop', 'sanitizer.discarded', $fqn, $file, $this->pos($e, $file), [
                     ['label' => "valeur de retour de $fn() jetee", 'position' => $this->pos($e, $file)],
-                ]);
+                ], $this->sinkIndex?->ordinalOf($e) ?? 0);
             }
         }
 
@@ -438,6 +488,7 @@ final class Propagate
                         'sql-injection-concat-pdo',
                         Vocabulary::SINK_METHODS[$m],
                         $fqn, $file, $this->pos($e, $file), $steps,
+                        $this->sinkIndex?->ordinalOf($e) ?? 0,
                     );
                 }
             }
@@ -463,24 +514,92 @@ final class Propagate
         string $file,
         Position $pos,
         array $steps,
+        int $ordinal,
     ): void {
-        $key = $fqn . '|' . $sinkKind;
-        $ordinal = $this->ordinals[$key] ?? 0;
-        $this->ordinals[$key] = $ordinal + 1;
-
+        $ref = new SinkRef($ruleId, $fqn, $sinkKind, $ordinal);
+        if (!$this->emit) {
+            // Mode resume : on retient l'atteinte, on n'emet rien.
+            $this->collectedSinks[] = $ref;
+            return;
+        }
         $witness = new PropagationChain($steps);
         // Invariant NFR-3 / FR-7 : aucune alerte sans temoin.
         if ($witness->isEmpty()) {
             return;
         }
-        $this->alerts[] = new Alert(
-            Alert::computeId($ruleId, $this->rulePack->id, $this->rulePack->major(), $file, $fqn, $sinkKind, $ordinal),
-            new SinkRef($ruleId, $fqn, $sinkKind, $ordinal),
-            $pos,
-            $this->rulePack->id,
-            $this->rulePack->major(),
-            $witness,
+        $id = Alert::computeId($ruleId, $this->rulePack->id, $this->rulePack->major(), $file, $fqn, $sinkKind, $ordinal);
+        // Un sink = une alerte, quel que soit le nombre de chemins qui y menent.
+        $this->alerts[$id] ??= new Alert(
+            $id, $ref, $pos, $this->rulePack->id, $this->rulePack->major(), $witness,
         );
+    }
+
+
+    /**
+     * Applique un resume au point d'appel (AD-6). Le `hop_template` du resume
+     * permet de reconstituer la chaine chez l'appelant : l'alerte porte
+     * l'identite du sink de l'APPELE, mais son temoin montre le saut.
+     */
+    private function applySummary(
+        \SqlGuard\Engine\Domain\FunctionSummary $sum,
+        Expr $call,
+        TaintState $state,
+        string $fqn,
+        string $file,
+    ): Taint {
+        $result = Taint::clean();
+        /** @var list<Node\Arg> $args */
+        $args = array_values(array_filter(
+            $call->args,
+            static fn($a): bool => $a instanceof Node\Arg,
+        ));
+
+        foreach ($args as $i => $arg) {
+            $argTaint = $this->evaluate($arg->value, $state, $fqn, $file);
+            if (!$argTaint->isTainted()) {
+                continue;
+            }
+            // Le parametre est assaini dans l'appele : la propagation s'arrete.
+            if ($sum->paramSanitizedBy($i) !== []) {
+                continue;
+            }
+            // Le parametre atteint un sink dans l'appele : l'alerte appartient
+            // au sink de l'appele, avec un temoin qui montre le saut.
+            foreach ($sum->paramReachesSink($i) as $ref) {
+                $steps = [];
+                foreach ($argTaint->sources as $src) {
+                    $steps[] = ['label' => "source non fiable $src", 'position' => $this->pos($arg->value, $file)];
+                }
+                $steps[] = [
+                    'label' => "passe en argument " . ($i + 1) . " a " . $sum->symbolFqn,
+                    'position' => $this->pos($call, $file),
+                ];
+                $steps[] = [
+                    'label' => 'atteint ' . $ref->sinkKind . ' dans ' . $ref->symbolFqn,
+                    'position' => $this->pos($call, $file),
+                ];
+                $this->emit(
+                    $ref->ruleId, $ref->sinkKind, $ref->symbolFqn,
+                    $this->calleeFile($ref->symbolFqn, $file),
+                    $this->pos($call, $file), $steps, $ref->ordinal,
+                );
+            }
+            if ($sum->paramReachesReturn($i)) {
+                $result = $result->union($argTaint);
+            }
+        }
+        if ($sum->returnsTaintedUnconditionally) {
+            $result = $result->union(Taint::tainted($sum->symbolFqn . ' (retour)'));
+        }
+        return $result;
+    }
+
+    private function calleeFile(string $calleeFqn, string $fallback): string
+    {
+        if ($this->symbols !== null && $this->symbols->has($calleeFqn)) {
+            return $this->symbols->get($calleeFqn)['file'];
+        }
+        return $fallback;
     }
 
     private function pos(Node $n, string $file): Position

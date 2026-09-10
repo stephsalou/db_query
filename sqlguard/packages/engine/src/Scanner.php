@@ -7,6 +7,8 @@ use SqlGuard\Engine\Domain\LimitRecorder;
 use SqlGuard\Engine\Domain\RulePack;
 use SqlGuard\Engine\Pass\Parse;
 use SqlGuard\Engine\Pass\Propagate;
+use SqlGuard\Engine\Pass\Summarize;
+use SqlGuard\Engine\Pass\SymbolTable;
 use SqlGuard\Engine\Port\FileSource;
 
 /**
@@ -28,20 +30,36 @@ final class Scanner
 
     public function scan(): Report
     {
-        $limits    = new LimitRecorder();
-        $parse     = new Parse($limits);
-        $propagate = new Propagate($this->rulePack, $limits);
+        $limits = new LimitRecorder();
+        $parse  = new Parse($limits);
 
+        // Passe 1 — Parse, une seule fois : les AST sont reutilises par les
+        // passes suivantes plutot que reparsees.
+        $asts = [];
         $included = 0;
         $excluded = 0;
         foreach ($this->files->phpFiles() as $canonical) {
             $ast = $parse->parse($this->files->read($canonical), $canonical);
-            if ($ast === null) {
-                $excluded++;
-                continue;
-            }
-            $propagate->analyseFile($ast, $canonical);
+            if ($ast === null) { $excluded++; continue; }
+            $asts[$canonical] = $ast;
             $included++;
+        }
+
+        // Passe 2 — table des symboles, tous fichiers confondus : sans vue
+        // globale, un appel inter-fichiers serait « non resolu » a tort.
+        $symbols = new SymbolTable();
+        foreach ($asts as $canonical => $ast) {
+            $symbols->addFile($ast, $canonical);
+        }
+
+        // Passe 3 — resumes interproceduraux, SCC en ordre topologique inverse.
+        $summaries = (new Summarize($symbols, $this->rulePack, $limits))->run();
+
+        // Passe 4 — propagation et emission.
+        $propagate = new Propagate($this->rulePack, $limits, $symbols);
+        $propagate->withSummaries($summaries);
+        foreach ($asts as $canonical => $ast) {
+            $propagate->analyseFile($ast, $canonical);
         }
 
         return new Report(

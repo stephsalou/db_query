@@ -1,0 +1,10 @@
+{
+  "expected": [
+    {
+      "rule_id": "sql-injection-concat-pdo",
+      "symbol_fqn": "\\lvl3",
+      "sink_kind": "pdo.exec",
+      "ordinal": 0
+    }
+  ]
+}

@@ -1,10 +1,10 @@
 {
-    "cases": 18,
-    "loc": 98,
+    "cases": 23,
+    "loc": 123,
     "tools": {
         "sqlguard": {
             "disponible": true,
-            "tp": 10,
+            "tp": 13,
             "fn": 0,
             "fp": 0,
             "rappel": 1,
@@ -14,7 +14,7 @@
         "psalm-defaut": {
             "disponible": true,
             "tp": 0,
-            "fn": 10,
+            "fn": 13,
             "fp": 0,
             "rappel": 0,
             "fp_per_10kloc": 0,
@@ -24,6 +24,9 @@
                 "manque:tp-branche-union",
                 "manque:tp-concat-simple",
                 "manque:tp-deux-sinks-ordinal",
+                "manque:tp-inter-1-saut",
+                "manque:tp-inter-3-sauts",
+                "manque:tp-inter-retour",
                 "manque:tp-interpolation",
                 "manque:tp-methode-classe",
                 "manque:tp-server-header",
@@ -33,10 +36,10 @@
         },
         "psalm-configure": {
             "disponible": true,
-            "tp": 8,
+            "tp": 11,
             "fn": 2,
             "fp": 0,
-            "rappel": 0.8,
+            "rappel": 0.8462,
             "fp_per_10kloc": 0,
             "ecarts": [
                 "manque:tp-server-header",
@@ -45,11 +48,11 @@
         },
         "semgrep": {
             "disponible": true,
-            "tp": 8,
+            "tp": 11,
             "fn": 2,
             "fp": 3,
-            "rappel": 0.8,
-            "fp_per_10kloc": 306.12,
+            "rappel": 0.8462,
+            "fp_per_10kloc": 243.9,
             "ecarts": [
                 "faux+:clean-cast-float",
                 "faux+:clean-cast-int",

@@ -276,5 +276,58 @@ check('une cle non litterale est marquee par prudence, avec limite consignee', f
     same(true, in_array('non_literal_key', $codes, true));
 });
 
+echo "\n-- interprocedural (AD-6 / story 3.4) --\n";
+check('un saut : le sink de l appele est attribue a l appele', function () use ($pack) {
+    $r = sgScan(fixture('<?php function g(PDO $d,string $s){ return $d->query($s); } function f(PDO $d){ return g($d, "S ".$_GET["a"]); }'), $pack);
+    same(1, count($r->alerts()));
+    same('\\g', $r->alerts()[0]->sinkRef->symbolFqn, 'l alerte porte le symbole de l appele');
+    // le temoin doit montrer le saut, sinon l utilisateur ne peut pas la suivre
+    $labels = implode(' | ', array_column($r->alerts()[0]->witness->toArray(), 'label'));
+    same(true, str_contains($labels, 'passe en argument'), 'temoin sans saut');
+});
+check('profondeur d appel >= 5 sauts (AD-6)', function () use ($pack) {
+    $n = 7;
+    $lines = ['<?php', sprintf('function h%d(PDO $d, string $s) { return $d->query($s); }', $n)];
+    for ($i = $n - 1; $i >= 1; $i--) {
+        $lines[] = sprintf('function h%d(PDO $d, string $s) { return h%d($d, $s); }', $i, $i + 1);
+    }
+    $lines[] = 'function start(PDO $d) { return h1($d, "S " . $_GET["q"]); }';
+    $r = sgScan(fixture(implode("\n", $lines)), $pack);
+    same(1, count($r->alerts()));
+    same('\\h7', $r->alerts()[0]->sinkRef->symbolFqn);
+});
+check('la marque revient par le retour et atteint un sink chez l appelant', function () use ($pack) {
+    $r = sgScan(fixture('<?php function p(string $v){ return $v."!"; } function f(PDO $d){ $v=p($_GET["v"]); return $d->query("S \'$v\'"); }'), $pack);
+    same(1, count($r->alerts()));
+    same('\\f', $r->alerts()[0]->sinkRef->symbolFqn);
+});
+check('un appele qui assainit ne produit pas d alerte', function () use ($pack) {
+    $r = sgScan(fixture('<?php function s(PDO $d,string $x){ return $d->query("S ".intval($x)); } function f(PDO $d){ return s($d,$_GET["i"]); }'), $pack);
+    same(0, count($r->alerts()));
+});
+check('la recursion mutuelle termine (condensation SCC)', function () use ($pack) {
+    $r = sgScan(fixture('<?php function a(string $s,int $n){ return $n>0 ? b($s,$n-1) : $s; } function b(string $s,int $n){ return $n>0 ? a($s,$n-1) : $s; } function u(){ return a("lit",3); }'), $pack);
+    same(0, count($r->alerts()));
+});
+check('un sink atteint par deux chemins ne produit qu une alerte (AD-9)', function () use ($pack) {
+    $r = sgScan(fixture('<?php function g(PDO $d,string $s){ return $d->query($s); } function f1(PDO $d){ return g($d,$_GET["a"]); } function f2(PDO $d){ return g($d,$_POST["b"]); }'), $pack);
+    same(1, count($r->alerts()), 'une seule alerte pour un seul sink');
+});
+check('un appel non resolu ne produit aucune alerte, seulement une limite (AD-6)', function () use ($pack) {
+    $r = sgScan(fixture('<?php function f(PDO $d){ return $d->query(inconnue($_GET["a"])); }'), $pack);
+    same(0, count($r->alerts()), 'aucune alerte sur appel non resolu');
+    $codes = array_column($r->toArray()['limits'], 'reason_code');
+    same(true, in_array('unknown_callee', $codes, true));
+});
+check('les ordinaux viennent du parcours prefixe, pas du chemin de flux (AD-5)', function () use ($pack) {
+    // Un sink dans une branche : son ordinal doit etre stable meme si la
+    // branche est parcourue puis unie.
+    $r = sgScan(fixture('<?php function f(PDO $d,$c){ $a=$_GET["a"]; if($c){ $d->query("A $a"); } $d->query("B $a"); }'), $pack);
+    same(2, count($r->alerts()));
+    $ords = array_map(fn($x) => $x->sinkRef->ordinal, $r->alerts());
+    sort($ords);
+    same([0, 1], $ords);
+});
+
 echo "\n$passed reussis, $failed echoues\n";
 exit($failed === 0 ? 0 : 1);

@@ -1,6 +1,6 @@
 # Comparaison mesurée — sqlguard, Psalm, Semgrep
 
-**Date :** 2026-09-10 · **Corpus :** 18 cas, 98 lignes · **Reproductible :** `php sqlguard/packages/bench/bin/bench-compare`
+**Date :** 2026-09-10 (2ᵉ mesure, après ajout de l'interprocédural) · **Corpus :** 23 cas, 123 lignes · **Reproductible :** `php sqlguard/packages/bench/bin/bench-compare`
 **Données brutes :** [`corpus/comparaison.json`](../corpus/comparaison.json)
 
 > Exigence PRD FR-13, story 2.4. Règle de méthode : les défaites de `sqlguard` sont publiées
@@ -18,10 +18,10 @@
 
 | Outil | Vrais positifs | Manques | Faux positifs | Rappel |
 |---|---|---|---|---|
-| **sqlguard** | 10 | 0 | 0 | 100,0 % |
-| **psalm — configuration par défaut** | 0 | 10 | 0 | **0,0 %** |
-| **psalm — stub PDO chargé** | 8 | 2 | 0 | 80,0 % |
-| **semgrep** | 8 | 2 | 3 | 80,0 % |
+| **sqlguard** | 13 | 0 | 0 | 100,0 % |
+| **psalm — configuration par défaut** | 0 | 13 | 0 | **0,0 %** |
+| **psalm — stub PDO chargé** | 11 | 2 | 0 | 84,6 % |
+| **semgrep** | 11 | 2 | 3 | 84,6 % |
 
 ## Lisez d'abord ceci : le 100 % de sqlguard ne veut presque rien dire
 
@@ -93,9 +93,16 @@ des 9 vrais positifs. Sans cette comparaison, le défaut serait toujours là.
 - Rien sur du code réel. 89 lignes écrites pour l'exercice ne prédisent pas le comportement sur
   200 kLOC de legacy.
 - Rien sur la performance. Aucun banc n'a été exécuté (story 2.1, non faite).
-- Rien sur l'interprocédural : sqlguard n'en fait pas (story 3.4, non faite), et le corpus ne
-  contient aucun cas qui l'exigerait. Psalm, lui, en fait. **Sur ce terrain il gagnerait**, et le
-  corpus actuel est incapable de le montrer.
+- **Sur l'interprocédural, ma prédiction était fausse.** J'avais écrit que Psalm gagnerait sur ce
+  terrain. L'interprocédural a été implémenté (story 3.4 : condensation SCC par Tarjan, fixpoint
+  borné, profondeur vérifiée à 7 sauts) et 5 cas ont été ajoutés au corpus — dont un à 3 sauts
+  inter-fichiers et un de récursion mutuelle. **Psalm configuré passe les trois cas
+  interprocéduraux, comme sqlguard.** Aucun avantage ne s'est révélé, dans aucun sens.
+
+  La conclusion honnête n'est pas « sqlguard égale Psalm » mais **« mes cas sont trop faciles pour
+  les discriminer »**. Un corpus qui départagerait réellement exigerait des conteneurs
+  d'injection de dépendances, des tableaux de callables, des appels via `__call`, des fabriques —
+  c'est-à-dire ce que contient du vrai code legacy et pas mon corpus.
 - Rien sur `mysqli` ni `wpdb`, hors périmètre V1.
 
 ## Note d'environnement

@@ -60,7 +60,7 @@
 # ---------------------------------------------------------------------------
 
 generated: 09-10-2026 12:37
-last_updated: 09-10-2026 15:21
+last_updated: 09-10-2026 16:34
 project: db_query
 project_key: NOKEY
 tracking_system: file-system
@@ -85,7 +85,7 @@ development_status:
   3-1-identifier-les-sources-non-fiables-sans-configuration: review
   3-2-reconnaître-pdo-comme-unique-sink-base-et-dire-ce-qui-n-est: review
   3-3-suivre-la-propagation-à-l-intérieur-d-une-fonction: review
-  3-4-traverser-les-appels-de-fonctions-et-de-méthodes-du-périmètr: backlog
+  3-4-traverser-les-appels-de-fonctions-et-de-méthodes-du-périmètr: review
   3-5-rompre-la-propagation-sur-un-assainisseur-et-refuser-les-fau: review
   3-6-dire-ce-que-l-analyse-n-a-pas-pu-suivre-et-échouer-plutôt-qu: review
   3-7-attacher-un-témoin-de-niveau-1-à-chaque-alerte-et-n-en-publi: review
