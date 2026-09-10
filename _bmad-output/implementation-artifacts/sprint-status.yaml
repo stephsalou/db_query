@@ -1,0 +1,109 @@
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+# ---------------------------------------------------------------------------
+# BLOCAGES CONNUS AU 10-09-2026 — a lire avant de demarrer une story
+#
+# 1. PORTE K-1 : le PRD (§19) interdit d'ecrire le moteur avant d'avoir franchi
+#    la porte de validation. Seul l'epic 1 est demarrable aujourd'hui.
+#    Decision par defaut si K-1 echoue : abandon du produit.
+#
+# 2. ARCHITECTURE : RESOLU le 10-09-2026. La colonne existe (26 AD, lint 0
+#    constat) sous planning-artifacts/architecture/. Les epics 3 et 4 ne sont
+#    plus bloques par l'architecture, mais restent bloques par la porte K-1,
+#    qui exige des entretiens humains reels.
+#    Historique : 11 prerequis d'architecture etaient marques dans epics.md
+#    (representation du graphe de flux, strategie de resumes inter-proceduraux,
+#    format de serialisation du corpus, frontiere moteur/interface, schema de
+#    champs de sortie S-2, hash structurel d'identifiant d'alerte, format de
+#    persistance du cache, point d'entree du banc).
+#    A produire avec `bmad-architecture` pendant les epics 1 et 2.
+#
+# 3. Le statut `backlog` ne distingue pas "pret" de "bloque" : le vocabulaire
+#    du suivi n'a pas de statut `blocked`. La distinction vit dans epics.md,
+#    section « Ecart de prerequis ».
+#
+# 4. Story 3.10 (FR-15, cache de resumes) est CONDITIONNELLE : engagee
+#    uniquement si le banc de la story 2.1 montre que le budget pre-commit est
+#    inatteignable sans elle.
+#
+# 5. Annonce publique interdite avant l'epic 5 (succession + anteriorite de
+#    marque, Q-1).
+# ---------------------------------------------------------------------------
+
+generated: 09-10-2026 12:37
+last_updated: 09-10-2026 14:33
+project: db_query
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+development_status:
+  epic-1: backlog
+  1-1-protocole-d-entretien-figé-avant-le-premier-entretien: review
+  1-2-entretiens-conduits-et-statut-de-validation-des-jobs-mis-à-j: backlog
+  1-3-preuve-de-demande-passive-obtenue-sans-démarchage: backlog
+  1-4-étude-de-mesure-directe-du-stock-de-dette-sql-php-publiée: backlog
+  1-5-décision-k-1-écrite-datée-et-opposable: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-banc-de-performance-mesuré-publié-puis-budgets-écrits: backlog
+  2-2-corpus-de-référence-annoté-versionné-et-gelé: backlog
+  2-3-harnais-de-qualité-rappel-et-faux-positifs-en-une-commande: backlog
+  2-4-comparaison-publiée-contre-psalm-et-semgrep-défaites-incluse: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-identifier-les-sources-non-fiables-sans-configuration: backlog
+  3-2-reconnaître-pdo-comme-unique-sink-base-et-dire-ce-qui-n-est: backlog
+  3-3-suivre-la-propagation-à-l-intérieur-d-une-fonction: backlog
+  3-4-traverser-les-appels-de-fonctions-et-de-méthodes-du-périmètr: backlog
+  3-5-rompre-la-propagation-sur-un-assainisseur-et-refuser-les-fau: backlog
+  3-6-dire-ce-que-l-analyse-n-a-pas-pu-suivre-et-échouer-plutôt-qu: backlog
+  3-7-attacher-un-témoin-de-niveau-1-à-chaque-alerte-et-n-en-publi: backlog
+  3-8-générer-un-témoin-exploitable-en-double-opt-in-hors-de-tout: backlog
+  3-9-consommer-le-moteur-comme-bibliothèque-sans-passer-par-la-cl: backlog
+  3-10-réutiliser-des-résumés-de-fonction-persistés-story-condition: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-obtenir-un-verdict-en-deux-commandes-sans-écrire-de-configur: backlog
+  4-2-faire-échouer-une-ci-sur-un-verdict-jamais-sur-une-analyse-i: backlog
+  4-3-transmettre-un-rapport-autoportant-lisible-par-un-auditeur: backlog
+  4-4-bloquer-une-régression-sur-la-pull-request-sans-github-advan: backlog
+  4-5-supprimer-une-alerte-sans-effacer-sa-trace: backlog
+  4-6-émettre-du-sarif-valide-annoncé-comme-secondaire: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-trouver-la-divulgation-de-provenance-avant-d-installer-l-out: review
+  5-2-consulter-une-documentation-dont-les-pages-de-règles-ne-peuv: review
+  5-3-lever-les-deux-conditions-d-annonce-publique-succession-et-n: backlog
+  epic-5-retrospective: optional

@@ -1,0 +1,36 @@
+---
+title: "Concaténation d'une source non fiable vers un sink base PDO"
+description: "Une valeur issue d'une source non fiable atteint une requête PDO par concaténation, sans paramètre lié."
+sidebar:
+  label: "sql-injection-concat-pdo"
+  badge:
+    text: "niveau 1"
+---
+
+{/* PAGE GENEREE — ne pas editer a la main. Source : rules/manifest.json */}
+
+**Identifiant :** `sql-injection-concat-pdo` · **Niveau :** 1
+
+Une valeur issue d'une source non fiable atteint une requête PDO par concaténation, sans paramètre lié.
+
+## Code vulnérable
+
+```php
+$id = $_GET['id'];
+$db->query("SELECT * FROM user WHERE id = '" . $id . "'");
+```
+
+## Code corrigé
+
+```php
+$st = $db->prepare('SELECT * FROM user WHERE id = ?');
+$st->execute([$_GET['id']]);
+```
+
+## Désactiver cette règle
+
+```text
+sqlguard-ignore: sql-injection-concat-pdo
+```
+
+**Quand c'est légitime.** Jamais sur une valeur d'origine externe. Légitime uniquement si la valeur est un littéral du code, auquel cas l'analyse ne devrait pas la marquer — signalez plutôt un faux positif.

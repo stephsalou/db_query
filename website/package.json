@@ -1,0 +1,17 @@
+{
+  "name": "sqlguard-docs",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.12.0" },
+  "scripts": {
+    "rules": "node scripts/build-rule-pages.mjs",
+    "prebuild": "node scripts/build-rule-pages.mjs --check",
+    "build": "astro build",
+    "dev": "astro dev",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "astro": "7.3.2",
+    "@astrojs/starlight": "0.42.0"
+  }
+}

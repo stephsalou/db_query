@@ -1,0 +1,26 @@
+{
+  "$schema": "./manifest.schema.json",
+  "version": 1,
+  "rules": [
+    {
+      "id": "sql-injection-concat-pdo",
+      "level": 1,
+      "title": "Concaténation d'une source non fiable vers un sink base PDO",
+      "summary": "Une valeur issue d'une source non fiable atteint une requête PDO par concaténation, sans paramètre lié.",
+      "vulnerable": "$id = $_GET['id'];\n$db->query(\"SELECT * FROM user WHERE id = '\" . $id . \"'\");",
+      "fixed": "$st = $db->prepare('SELECT * FROM user WHERE id = ?');\n$st->execute([$_GET['id']]);",
+      "disable": "sqlguard-ignore: sql-injection-concat-pdo",
+      "legitimate": "Jamais sur une valeur d'origine externe. Légitime uniquement si la valeur est un littéral du code, auquel cas l'analyse ne devrait pas la marquer — signalez plutôt un faux positif."
+    },
+    {
+      "id": "sanitizer-noop",
+      "level": 1,
+      "title": "Assainisseur sans effet : valeur de retour non conservée",
+      "summary": "Une fonction appelle un échappeur mais jette sa valeur de retour. La propagation n'est pas rompue. C'est le défaut historique de ce dépôt — voir la page de provenance.",
+      "vulnerable": "foreach ($arr as $k => $v) {\n    addslashes(($arr[$k] = \"'\" . $v . \"'\"));\n}",
+      "fixed": "foreach ($arr as $k => $v) {\n    $arr[$k] = \"'\" . addslashes((string) $v) . \"'\";\n}",
+      "disable": "sqlguard-ignore: sanitizer-noop",
+      "legitimate": "Aucun cas légitime connu. Un échappeur dont le retour est jeté est toujours un défaut."
+    }
+  ]
+}

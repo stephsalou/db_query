@@ -1,6 +1,18 @@
-.claude/
-_bmad*
+# Outillage bmad vendored : 15 Mo / 1096 fichiers, reinstallable.
+# On garde settings.json, qui enregistre les hooks : sans lui, un clone recoit
+# .bmad-loop/bmad_loop_hook.py avec rien qui l'appelle.
+.claude/*
+!.claude/settings.json
+
+# Framework bmad installe (reinstallable). N'inclut PAS _bmad-output/,
+# qui contient le PRD, les epics et le brainstorming — eux sont versionnes.
+_bmad/
+
+# Etat de run local de bmad-loop
 .bmad-loop/runs/
 .bmad-loop/cache/
 .bmad-loop/policy.toml
-_bmad/render/
+
+# Dependances PHP
+/vendor/
+composer.lock

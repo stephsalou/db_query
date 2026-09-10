@@ -6,6 +6,10 @@ allowlist.
 
 Requires PHP >= 7.4 and the PDO extension.
 
+> **[Provenance et divulgation](docs/provenance.md)** — this library shipped a `escape_data()`
+> method that escaped nothing for seven years. What the defect was, how it was found, and what it
+> proves. Read it before trusting anything here.
+
 ## Table of Contents
 
 - [initialisation](#initialisation)

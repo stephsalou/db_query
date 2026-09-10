@@ -1,0 +1,39 @@
+---
+title: sqlguard
+description: Moteur d'analyse de sûreté SQL pour PHP. Il ne rédige pas de SQL, il le juge.
+---
+
+`sqlguard` ne rédige pas de SQL. Il **juge** celui qui existe déjà.
+
+## Le problème
+
+La douleur n'est pas d'écrire une requête. C'est d'avoir confiance dans celles qui sont déjà là —
+écrites par un tiers, par du legacy, ou par un agent de codage que personne ne relit.
+
+## Ce que l'outil promet, et rien de plus
+
+Une seule revendication, écrite pour être réfutable :
+
+> Sur un corpus figé de code PHP legacy non typé, `sqlguard` en configuration par défaut détecte
+> au moins autant de chaînes de propagation vers PDO que Psalm et Semgrep en configuration par
+> défaut, avec un nombre de faux positifs par 10 kLOC inférieur ou égal, et produit pour chaque
+> alerte une chaîne de propagation reproductible que ni l'un ni l'autre ne fournit.
+
+Si la comparaison mesurée échoue, la revendication tombe. Le protocole et le corpus sont publics.
+
+## Ce que l'outil ne fait pas
+
+- Il ne remplace ni Doctrine, ni Eloquent, ni aucune fonctionnalité de framework.
+- Il n'exécute jamais le code analysé.
+- Il n'émet aucune requête réseau pendant un scan.
+- Il ne publie **aucune alerte sans témoin** de propagation.
+
+Voir [Limites](/fr/concepts/limites/) pour ce qu'il ne détecte pas.
+
+## État du projet
+
+**Pré-validation.** Aucun moteur n'est écrit. Le projet est à sa porte de validation : des
+entretiens décident s'il doit exister. La décision par défaut, en cas d'échec, est l'abandon.
+
+Lisez d'abord la [provenance du projet](https://github.com/stephsalou/db_query/blob/master/docs/provenance.md) —
+elle documente un défaut de sécurité dans l'ancêtre de cet outil.

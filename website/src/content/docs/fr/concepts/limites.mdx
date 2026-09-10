@@ -1,0 +1,33 @@
+---
+title: Limites
+description: Ce que sqlguard ne détecte pas. Page obligatoire et volontairement visible.
+sidebar:
+  order: 99
+---
+
+Un outil de sécurité qui ne dit pas ce qu'il rate perd sa crédibilité au premier faux négatif
+trouvé par un utilisateur. Cette page est donc dans la navigation principale, pas en annexe.
+
+## Constructions non suivies
+
+| Construction | Conséquence |
+|---|---|
+| SQL assemblé hors du périmètre analysé (fichier non lu, code généré à l'exécution) | Chaîne de propagation non vue |
+| Appels dynamiques (`$fn()`, `call_user_func`, `__call`) | Propagation interrompue, signalée en limite d'analyse |
+| Sinks autres que PDO en V1 (`mysqli`, `wpdb`) | **Non couverts.** Un dépôt qui les mélange n'est que partiellement analysé |
+| Réflexion, `eval`, inclusion dynamique | Hors de portée par construction |
+| SQL stocké en base ou en configuration | Hors de portée |
+
+## Pourquoi un seul sink en V1
+
+Trois sinks annoncés valent moins qu'un seul mesuré. La couverture de `mysqli` et `wpdb` est un
+incrément ultérieur, pas une promesse implicite.
+
+Si votre code mélange PDO et `mysqli`, un scan `sqlguard` V1 est **incomplet** — et il vous le
+dira explicitement plutôt que de rendre un verdict rassurant.
+
+## Échec plutôt que silence
+
+Toute analyse incomplète produit un code de sortie distinct et une mention dans les limites
+d'analyse du rapport. L'outil ne rend jamais un verdict vert sur une analyse qu'il n'a pas pu
+terminer.

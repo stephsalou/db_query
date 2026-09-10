@@ -1,0 +1,26 @@
+---
+title: Installation
+description: Installer sqlguard en développement.
+sidebar:
+  order: 1
+---
+
+:::caution[Pas encore publié]
+Le moteur n'existe pas. Cette page décrit l'installation visée, pas une installation possible
+aujourd'hui.
+:::
+
+```bash
+composer require --dev steph/sqlguard
+vendor/bin/sqlguard scan .
+```
+
+Aucun service, aucune base, aucun démon. L'outil s'exécute localement et n'émet aucune requête
+réseau.
+
+## Cibles
+
+| | Version |
+|---|---|
+| Runtime de l'outil | PHP ≥ 8.2 |
+| Code analysé | PHP 5.6 → 8.5 |

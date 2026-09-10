@@ -1,0 +1,38 @@
+---
+title: "Assainisseur sans effet : valeur de retour non conservée"
+description: "Une fonction appelle un échappeur mais jette sa valeur de retour. La propagation n'est pas rompue. C'est le défaut historique de ce dépôt — voir la page de provenance."
+sidebar:
+  label: "sanitizer-noop"
+  badge:
+    text: "niveau 1"
+---
+
+{/* PAGE GENEREE — ne pas editer a la main. Source : rules/manifest.json */}
+
+**Identifiant :** `sanitizer-noop` · **Niveau :** 1
+
+Une fonction appelle un échappeur mais jette sa valeur de retour. La propagation n'est pas rompue. C'est le défaut historique de ce dépôt — voir la page de provenance.
+
+## Code vulnérable
+
+```php
+foreach ($arr as $k => $v) {
+    addslashes(($arr[$k] = "'" . $v . "'"));
+}
+```
+
+## Code corrigé
+
+```php
+foreach ($arr as $k => $v) {
+    $arr[$k] = "'" . addslashes((string) $v) . "'";
+}
+```
+
+## Désactiver cette règle
+
+```text
+sqlguard-ignore: sanitizer-noop
+```
+
+**Quand c'est légitime.** Aucun cas légitime connu. Un échappeur dont le retour est jeté est toujours un défaut.
