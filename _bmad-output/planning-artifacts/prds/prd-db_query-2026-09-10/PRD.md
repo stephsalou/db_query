@@ -728,6 +728,25 @@ Le versionnage sémantique n'a de sens que si la surface est nommée. Quatre sur
 
 ## 19. Critères d'arrêt — pré-enregistrés
 
+> ### ⚠ K-1 LEVÉE PAR DÉCISION DE L'AUTEUR — 2026-09-10
+>
+> Stéphane a instruit d'ignorer l'exigence d'entretiens humains et de poursuivre le
+> développement. **K-1 n'est donc pas franchie : elle est levée.** La distinction est
+> importante et doit survivre dans ce document :
+>
+> - **Aucun entretien n'a eu lieu.** Les 8 jobs du §5.1 restent `hypothèse`, sans exception.
+> - La règle contraignante du §13.1 (« un job ne peut porter une FR de la V1 qu'après passage
+>   à `validé par N entretiens` ») est **suspendue**, non satisfaite.
+> - Le risque que le constat 9 de la revue adverse décrivait — construire pour un marché non
+>   validé — est **accepté sciemment**, pas éliminé.
+> - **K-2 et K-3 restent actifs.** Ce sont désormais les seuls garde-fous : si la comparaison
+>   mesurée contre Psalm et Semgrep (SM-1) échoue, la revendication du §3.4 tombe et l'issue
+>   prévue s'applique.
+> - Le protocole d'entretien (`docs/validation/protocole-entretiens.md`) reste figé et
+>   utilisable si la validation est reprise plus tard.
+>
+> Aucune communication publique ne doit présenter la V1 comme validée par des utilisateurs.
+
 > **Recalibrage du 2026-09-10.** K-2 et K-3 portaient T+4 et T+9 mois, calculés sous l'hypothèse d'un budget de 6 mois. La capacité réelle déclarée au §4.4 est de **10 h/semaine**, soit ≈ 43 h/mois : à ce rythme, les 4 premiers mois n'offrent que ≈ 170 h, dont ≈ 55 h consommées par S0 — insuffisant pour livrer S1 puis S2, dont l'effort estimé cumulé est de ≈ 530 h. Les échéances passent donc à **T+14** et **T+20 mois**.
 >
 > Ce report est un **desserrement d'échéance, pas un affaiblissement de seuil** : aucun des trois seuils falsifiables n'est modifié, et K-1 reste à T+6 semaines puisqu'il ne dépend que d'entretiens. Une date tenable est une date qui peut réellement déclencher un abandon ; une date intenable se renégocie au lieu de trancher, ce qui est exactement le défaut que ces critères existent pour empêcher.

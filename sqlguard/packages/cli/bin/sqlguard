@@ -1,0 +1,7 @@
+#!/usr/bin/env php
+<?php declare(strict_types=1);
+
+foreach ([__DIR__ . '/../../../vendor/autoload.php', __DIR__ . '/../../../../vendor/autoload.php'] as $a) {
+    if (is_file($a)) { require $a; break; }
+}
+exit((new SqlGuard\Cli\ScanCommand())->run($argv));

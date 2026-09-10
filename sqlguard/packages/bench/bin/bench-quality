@@ -1,0 +1,25 @@
+#!/usr/bin/env php
+<?php declare(strict_types=1);
+require __DIR__ . '/../../../vendor/autoload.php';
+
+$root = dirname(__DIR__, 4); // racine du depot, au-dessus de sqlguard/
+$h = new SqlGuard\Bench\QualityHarness($root . '/corpus/cas', $root . '/rules/manifest.json');
+$r = $h->run();
+
+printf("Harnais qualite — %d cas, %d lignes\n", $r['cases'], $r['loc']);
+printf("%s\n", str_repeat('-', 60));
+printf("  vrais positifs   : %d\n", $r['tp']);
+printf("  manques (FN)     : %d\n", $r['fn']);
+printf("  faux positifs    : %d\n", $r['fp']);
+printf("  rappel           : %.1f %%  (seuil NFR-2 : >= 85 %%)\n", $r['recall'] * 100);
+printf("  FP / 10 kLOC     : %.2f     (seuil NFR-2 : <= 3.00)\n", $r['fp_per_10kloc']);
+printf("%s\n", str_repeat('-', 60));
+foreach ($r['par_cas'] as $id => $c) {
+    if ($c['fn'] || $c['fp']) {
+        printf("  %-28s tp=%d fn=%d fp=%d\n", $id, $c['tp'], $c['fn'], $c['fp']);
+        foreach ($c['manques'] ?? [] as $m)       { printf("      MANQUE  %s\n", $m); }
+        foreach ($c['faux_positifs'] ?? [] as $m) { printf("      FAUX +  %s\n", $m); }
+    }
+}
+printf("\nNFR-2 %s\n", $r['nfr2_respecte'] ? 'RESPECTE' : 'VIOLE — cette version ne doit pas etre publiee');
+exit($r['nfr2_respecte'] ? 0 : 1);

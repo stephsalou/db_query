@@ -1,0 +1,1 @@
+{"expected":[{"rule_id":"sanitizer-noop","symbol_fqn":"\\f","sink_kind":"sanitizer.discarded","ordinal":0}]}

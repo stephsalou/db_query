@@ -31,9 +31,10 @@
 # ---------------------------------------------------------------------------
 # BLOCAGES CONNUS AU 10-09-2026 — a lire avant de demarrer une story
 #
-# 1. PORTE K-1 : le PRD (§19) interdit d'ecrire le moteur avant d'avoir franchi
-#    la porte de validation. Seul l'epic 1 est demarrable aujourd'hui.
-#    Decision par defaut si K-1 echoue : abandon du produit.
+# 1. PORTE K-1 : LEVEE PAR DECISION DE L'AUTEUR le 10-09-2026 -- pas franchie.
+#    Aucun entretien n'a eu lieu ; les 8 jobs du PRD §5.1 restent `hypothese`.
+#    Le developpement du moteur est autorise malgre cela, risque accepte.
+#    K-2 et K-3 restent les seuls garde-fous actifs (voir PRD §19).
 #
 # 2. ARCHITECTURE : RESOLU le 10-09-2026. La colonne existe (26 AD, lint 0
 #    constat) sous planning-artifacts/architecture/. Les epics 3 et 4 ne sont
@@ -59,7 +60,7 @@
 # ---------------------------------------------------------------------------
 
 generated: 09-10-2026 12:37
-last_updated: 09-10-2026 14:33
+last_updated: 09-10-2026 14:50
 project: db_query
 project_key: NOKEY
 tracking_system: file-system
@@ -75,27 +76,27 @@ development_status:
 
   epic-2: backlog
   2-1-banc-de-performance-mesuré-publié-puis-budgets-écrits: backlog
-  2-2-corpus-de-référence-annoté-versionné-et-gelé: backlog
-  2-3-harnais-de-qualité-rappel-et-faux-positifs-en-une-commande: backlog
+  2-2-corpus-de-référence-annoté-versionné-et-gelé: review
+  2-3-harnais-de-qualité-rappel-et-faux-positifs-en-une-commande: review
   2-4-comparaison-publiée-contre-psalm-et-semgrep-défaites-incluse: backlog
   epic-2-retrospective: optional
 
   epic-3: backlog
-  3-1-identifier-les-sources-non-fiables-sans-configuration: backlog
-  3-2-reconnaître-pdo-comme-unique-sink-base-et-dire-ce-qui-n-est: backlog
-  3-3-suivre-la-propagation-à-l-intérieur-d-une-fonction: backlog
+  3-1-identifier-les-sources-non-fiables-sans-configuration: review
+  3-2-reconnaître-pdo-comme-unique-sink-base-et-dire-ce-qui-n-est: review
+  3-3-suivre-la-propagation-à-l-intérieur-d-une-fonction: review
   3-4-traverser-les-appels-de-fonctions-et-de-méthodes-du-périmètr: backlog
-  3-5-rompre-la-propagation-sur-un-assainisseur-et-refuser-les-fau: backlog
-  3-6-dire-ce-que-l-analyse-n-a-pas-pu-suivre-et-échouer-plutôt-qu: backlog
-  3-7-attacher-un-témoin-de-niveau-1-à-chaque-alerte-et-n-en-publi: backlog
+  3-5-rompre-la-propagation-sur-un-assainisseur-et-refuser-les-fau: review
+  3-6-dire-ce-que-l-analyse-n-a-pas-pu-suivre-et-échouer-plutôt-qu: review
+  3-7-attacher-un-témoin-de-niveau-1-à-chaque-alerte-et-n-en-publi: review
   3-8-générer-un-témoin-exploitable-en-double-opt-in-hors-de-tout: backlog
-  3-9-consommer-le-moteur-comme-bibliothèque-sans-passer-par-la-cl: backlog
+  3-9-consommer-le-moteur-comme-bibliothèque-sans-passer-par-la-cl: review
   3-10-réutiliser-des-résumés-de-fonction-persistés-story-condition: backlog
   epic-3-retrospective: optional
 
   epic-4: backlog
-  4-1-obtenir-un-verdict-en-deux-commandes-sans-écrire-de-configur: backlog
-  4-2-faire-échouer-une-ci-sur-un-verdict-jamais-sur-une-analyse-i: backlog
+  4-1-obtenir-un-verdict-en-deux-commandes-sans-écrire-de-configur: review
+  4-2-faire-échouer-une-ci-sur-un-verdict-jamais-sur-une-analyse-i: review
   4-3-transmettre-un-rapport-autoportant-lisible-par-un-auditeur: backlog
   4-4-bloquer-une-régression-sur-la-pull-request-sans-github-advan: backlog
   4-5-supprimer-une-alerte-sans-effacer-sa-trace: backlog

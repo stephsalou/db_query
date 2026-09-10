@@ -1,0 +1,22 @@
+{
+    "name": "steph/sqlguard-dev",
+    "description": "Racine de developpement du monorepo sqlguard (non publiee)",
+    "license": "GPL-3.0-or-later",
+    "type": "project",
+    "require": {
+        "php": ">=8.2",
+        "nikic/php-parser": "^5.8"
+    },
+    "autoload": {
+        "psr-4": {
+            "SqlGuard\\Engine\\": "packages/engine/src/",
+            "SqlGuard\\RulePack\\Generic\\": "packages/rulepack-generic/src/",
+            "SqlGuard\\Cli\\": "packages/cli/src/",
+            "SqlGuard\\Bench\\": "packages/bench/src/"
+        }
+    },
+    "config": { "sort-packages": true },
+    "scripts": {
+        "test": "php tests/run.php"
+    }
+}

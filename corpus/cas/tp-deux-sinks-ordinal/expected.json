@@ -1,0 +1,1 @@
+{"expected":[{"rule_id":"sql-injection-concat-pdo","symbol_fqn":"\\f","sink_kind":"pdo.query","ordinal":0},{"rule_id":"sql-injection-concat-pdo","symbol_fqn":"\\f","sink_kind":"pdo.query","ordinal":1}]}

@@ -1,0 +1,1 @@
+{"expected":[{"rule_id":"sql-injection-concat-pdo","symbol_fqn":"\\Repo::find","sink_kind":"pdo.query","ordinal":0}]}
