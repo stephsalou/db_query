@@ -1,11 +1,23 @@
 {
-    "name": "steph/framework_php",
-    "license": "GNU",
+    "name": "steph/db-query",
+    "description": "Simple SQL query builder on top of PDO, with prepared statements",
+    "license": "GPL-3.0-or-later",
     "authors": [
         {
             "name": "steph salou",
             "email": "saloustephane123@gmail.com"
         }
     ],
-    "require": {}
+    "require": {
+        "php": ">=7.4",
+        "ext-pdo": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "steph\\db_query\\": "src/"
+        }
+    },
+    "scripts": {
+        "test": "php tests/test_db_query.php"
+    }
 }
