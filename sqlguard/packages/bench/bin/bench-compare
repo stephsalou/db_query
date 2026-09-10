@@ -1,0 +1,54 @@
+#!/usr/bin/env php
+<?php declare(strict_types=1);
+require __DIR__ . '/../../../vendor/autoload.php';
+
+$root       = dirname(__DIR__, 4);
+$psalmDir   = '/tmp/competitors';
+$psalmBin   = $psalmDir . '/vendor/bin/psalm';
+// Cherche semgrep sur le PATH puis aux emplacements d'installation pip usuels :
+// shell_exec() n'herite pas toujours du PATH interactif.
+$semgrepBin = trim((string) shell_exec('command -v semgrep 2>/dev/null')) ?: null;
+if ($semgrepBin === null) {
+    foreach (glob('/Library/Frameworks/Python.framework/Versions/*/bin/semgrep') ?: [] as $c) {
+        if (is_executable($c)) { $semgrepBin = $c; break; }
+    }
+}
+foreach (['/usr/local/bin/semgrep', '/opt/homebrew/bin/semgrep', getenv('HOME') . '/.local/bin/semgrep'] as $c) {
+    if ($semgrepBin === null && is_executable($c)) { $semgrepBin = $c; }
+}
+
+$h = new SqlGuard\Bench\ComparisonHarness(
+    $root . '/corpus/cas',
+    $root . '/rules/manifest.json',
+    is_file($psalmBin) ? $psalmBin : null,
+    is_file($psalmBin) ? $psalmDir : null,
+    $semgrepBin,
+);
+$r = $h->run();
+
+printf("Comparaison mesuree — %d cas, %d lignes — %s\n", $r['cases'], $r['loc'], date('Y-m-d'));
+printf("%s\n", str_repeat('=', 78));
+printf("%-18s %7s %7s %7s %9s %14s\n", 'outil', 'VP', 'manq.', 'faux+', 'rappel', 'FP/10kLOC');
+printf("%s\n", str_repeat('-', 78));
+foreach ($r['tools'] as $tool => $m) {
+    if (!$m['disponible']) {
+        printf("%-18s %s\n", $tool, 'non disponible sur cette machine');
+        continue;
+    }
+    printf(
+        "%-18s %7d %7d %7d %8.1f%% %14.2f\n",
+        $tool, $m['tp'], $m['fn'], $m['fp'], $m['rappel'] * 100, $m['fp_per_10kloc'],
+    );
+}
+printf("%s\n", str_repeat('=', 78));
+foreach ($r['tools'] as $tool => $m) {
+    if (($m['disponible'] ?? false) && $m['ecarts'] !== []) {
+        printf("%s :\n", $tool);
+        foreach ($m['ecarts'] as $e) { printf("    %s\n", $e); }
+    }
+}
+file_put_contents(
+    $root . '/corpus/comparaison.json',
+    json_encode($r, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n",
+);
+echo "\nResultats ecrits dans corpus/comparaison.json\n";

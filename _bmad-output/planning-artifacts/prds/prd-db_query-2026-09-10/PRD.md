@@ -112,6 +112,22 @@ La formule « le concurrent réel, c'est le consultant en audit facturé à la j
 
 ### 3.4 Revendication de différenciation — étroite et testable
 
+> **Première mesure, 2026-09-10.** La comparaison a été exécutée
+> (`docs/comparaison-mesuree.md`, données dans `corpus/comparaison.json`) :
+> Psalm 6.17.0 en configuration minimale détecte **0 sur 10** injections vers PDO, parce que
+> l'extension PDO chargée masque son propre stub annoté — silence, pas erreur. Configuré, il
+> monte à 8/10 sans faux positif, soit le niveau de sqlguard sur ce corpus avec des années de
+> maturité en plus. Semgrep 1.176.1 : 8/10 avec 3 faux positifs.
+>
+> **La revendication tient donc, mais uniquement dans sa forme étroite** : rendement en
+> configuration par défaut. Toute formulation suggérant une supériorité analytique est fausse et
+> interdite. Le 100 % de sqlguard porte sur un corpus que j'ai écrit : il ne démontre que sa
+> cohérence interne, et ne doit jamais être cité seul.
+>
+> La comparaison a par ailleurs **corrigé deux défauts de sqlguard** : `addslashes` traité à tort
+> comme assainisseur, et `$_SERVER` marqué en totalité. Les deux étaient invisibles pour le
+> corpus seul.
+
 Une seule revendication est autorisée en V1, formulée de façon falsifiable :
 
 > **Sur un corpus figé de code PHP legacy non typé, `sqlguard` en configuration par défaut détecte au moins autant de chaînes de propagation vers PDO que Psalm et Semgrep en configuration par défaut, avec un nombre de faux positifs par 10 kLOC inférieur ou égal, et produit pour chaque alerte une chaîne de propagation reproductible que ni l'un ni l'autre ne fournit.**

@@ -136,8 +136,16 @@ check('assainisseur dont le retour est jete est signale', function () use ($pack
     same(1, count($r->alerts()));
     same('sanitizer-noop', $r->alerts()[0]->sinkRef->ruleId);
 });
-check('assainisseur dont le retour est conserve ne l est pas', function () use ($pack) {
+check('addslashes conserve ne suffit pas : la marque passe', function () use ($pack) {
+    // Etabli par la comparaison mesuree contre Psalm : addslashes() n'echappe
+    // pas selon le jeu de caracteres de la connexion. Notre corpus annotait ce
+    // cas propre a tort. Voir corpus/comparaison.json.
     $r = sgScan(fixture('<?php function f(PDO $d){ $n=addslashes((string)$_GET["n"]); return $d->query("S \'$n\'"); }'), $pack);
+    same(1, count($r->alerts()));
+    same('sql-injection-concat-pdo', $r->alerts()[0]->sinkRef->ruleId);
+});
+check('intval conserve rompt bien la propagation', function () use ($pack) {
+    $r = sgScan(fixture('<?php function f(PDO $d){ $n=intval($_GET["n"]); return $d->query("S $n"); }'), $pack);
     same(0, count($r->alerts()));
 });
 check('ordinaux distincts pour deux sinks du meme kind', function () use ($pack) {
@@ -248,6 +256,24 @@ check('une alerte supprimee est marquee, jamais effacee (AD-16)', function () us
     $d = (new Scanner(new LocalFileSource($dir), $pack, $ids))->scan()->toArray();
     same(1, count($d['alerts']), 'alerte toujours presente dans S-2');
     same(true, $d['alerts'][0]['suppressed'], 'marquee supprimee');
+});
+
+echo "\n-- \$_SERVER : cles controlables vs cles serveur --\n";
+check('un en-tete HTTP_ est non fiable', function () use ($pack) {
+    $r = sgScan(fixture('<?php function f(PDO $d){ return $d->query("S ".$_SERVER["HTTP_REFERER"]); }'), $pack);
+    same(1, count($r->alerts()));
+});
+check('une cle serveur ne l est pas', function () use ($pack) {
+    // Faux positif latent identifie par la comparaison mesuree : traiter tout
+    // $_SERVER comme non fiable declenchait a tort sur DOCUMENT_ROOT.
+    $r = sgScan(fixture('<?php function f(PDO $d){ return $d->query("S ".$_SERVER["DOCUMENT_ROOT"]); }'), $pack);
+    same(0, count($r->alerts()));
+});
+check('une cle non litterale est marquee par prudence, avec limite consignee', function () use ($pack) {
+    $r = sgScan(fixture('<?php function f(PDO $d,$k){ return $d->query("S ".$_SERVER[$k]); }'), $pack);
+    same(1, count($r->alerts()));
+    $codes = array_column($r->toArray()['limits'], 'reason_code');
+    same(true, in_array('non_literal_key', $codes, true));
 });
 
 echo "\n$passed reussis, $failed echoues\n";

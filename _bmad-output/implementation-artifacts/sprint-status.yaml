@@ -60,7 +60,7 @@
 # ---------------------------------------------------------------------------
 
 generated: 09-10-2026 12:37
-last_updated: 09-10-2026 14:50
+last_updated: 09-10-2026 15:21
 project: db_query
 project_key: NOKEY
 tracking_system: file-system
@@ -78,7 +78,7 @@ development_status:
   2-1-banc-de-performance-mesuré-publié-puis-budgets-écrits: backlog
   2-2-corpus-de-référence-annoté-versionné-et-gelé: review
   2-3-harnais-de-qualité-rappel-et-faux-positifs-en-une-commande: review
-  2-4-comparaison-publiée-contre-psalm-et-semgrep-défaites-incluse: backlog
+  2-4-comparaison-publiée-contre-psalm-et-semgrep-défaites-incluse: review
   epic-2-retrospective: optional
 
   epic-3: backlog

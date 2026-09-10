@@ -271,6 +271,22 @@ final class Propagate
             if ($root !== null && in_array($root, Vocabulary::SOURCE_GLOBALS, true)) {
                 return Taint::tainted('$' . $root);
             }
+            if ($root === '_SERVER') {
+                // Cle litterale : seules les cles controlables par le client
+                // sont non fiables. Cle non litterale : prudence, on marque et
+                // on consigne l'imprecision.
+                if ($e->dim instanceof Node\Scalar\String_) {
+                    return Vocabulary::isServerKeyControllable($e->dim->value)
+                        ? Taint::tainted('$_SERVER[' . $e->dim->value . ']')
+                        : Taint::clean();
+                }
+                $this->limits->record(
+                    LimitRecorder::NON_LITERAL_KEY,
+                    'cle non litterale sur $_SERVER : marquee par prudence',
+                    $this->pos($e, $file),
+                );
+                return Taint::tainted('$_SERVER');
+            }
         }
         if ($e instanceof Expr\Variable && is_string($e->name)
             && in_array($e->name, Vocabulary::SOURCE_GLOBALS, true)) {
@@ -317,6 +333,14 @@ final class Propagate
                     // Assainisseur : rompt la propagation UNIQUEMENT parce que sa
                     // valeur de retour est ici consommee.
                     return Taint::sanitized(Vocabulary::SANITIZERS[$fn]);
+                }
+                if (isset(Vocabulary::WEAK_ESCAPERS[$fn])) {
+                    // Echappeur insuffisant pour du SQL : la marque PASSE.
+                    $t = Taint::clean();
+                    foreach ($e->args as $a) {
+                        if ($a instanceof Node\Arg) { $t = $t->union($this->evaluate($a->value, $state, $fqn, $file)); }
+                    }
+                    return $t;
                 }
                 if (in_array($fn, ['sprintf', 'implode', 'join', 'str_replace', 'trim', 'strtolower', 'strtoupper'], true)) {
                     $t = Taint::clean();
@@ -387,7 +411,8 @@ final class Propagate
         // assainisseur dont le retour est jete
         if ($discardedResult && $e instanceof Expr\FuncCall && $e->name instanceof Node\Name) {
             $fn = strtolower($e->name->toString());
-            if (isset(Vocabulary::SANITIZERS[$fn]) && $this->rulePack->has('sanitizer-noop')) {
+            $isEscaper = isset(Vocabulary::SANITIZERS[$fn]) || isset(Vocabulary::WEAK_ESCAPERS[$fn]);
+            if ($isEscaper && $this->rulePack->has('sanitizer-noop')) {
                 $this->emit('sanitizer-noop', 'sanitizer.discarded', $fqn, $file, $this->pos($e, $file), [
                     ['label' => "valeur de retour de $fn() jetee", 'position' => $this->pos($e, $file)],
                 ]);

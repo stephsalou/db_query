@@ -1,0 +1,11 @@
+{
+  "expected": [
+    {
+      "rule_id": "sql-injection-concat-pdo",
+      "symbol_fqn": "\\f",
+      "sink_kind": "pdo.query",
+      "ordinal": 0
+    }
+  ],
+  "note": "Reclassé de propre à vrai positif le 2026-09-10. addslashes() n'est pas un échappement SQL sûr : établi par la comparaison mesurée contre Psalm, qui signalait ce cas que notre annotation déclarait propre."
+}
