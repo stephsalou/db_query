@@ -1,6 +1,6 @@
 # Comparaison mesurée — sqlguard, Psalm, Semgrep
 
-**Date :** 2026-09-10 (2ᵉ mesure, après ajout de l'interprocédural) · **Corpus :** 23 cas, 123 lignes · **Reproductible :** `php sqlguard/packages/bench/bin/bench-compare`
+**Date :** 2026-09-11 (3ᵉ mesure, corpus durci) · **Corpus :** 35 cas, 192 lignes · **Reproductible :** `php sqlguard/packages/bench/bin/bench-compare`
 **Données brutes :** [`corpus/comparaison.json`](../corpus/comparaison.json)
 
 > Exigence PRD FR-13, story 2.4. Règle de méthode : les défaites de `sqlguard` sont publiées
@@ -18,10 +18,32 @@
 
 | Outil | Vrais positifs | Manques | Faux positifs | Rappel |
 |---|---|---|---|---|
-| **sqlguard** | 13 | 0 | 0 | 100,0 % |
-| **psalm — configuration par défaut** | 0 | 13 | 0 | **0,0 %** |
-| **psalm — stub PDO chargé** | 11 | 2 | 0 | 84,6 % |
-| **semgrep** | 11 | 2 | 3 | 84,6 % |
+| **sqlguard** | 21 | 2 | 0 | 91,3 % |
+| **psalm — configuration par défaut** | 0 | 23 | 0 | **0,0 %** |
+| **psalm — stub PDO chargé** | 16 | 7 | 0 | 69,6 % |
+| **semgrep** | 19 | 4 | 5 | 82,6 % |
+
+### ⚠ Ce tableau est biaisé en faveur de sqlguard, et voici comment
+
+Le corpus a d'abord été durci avec 12 cas de vrai legacy. **sqlguard est alors tombé à 69,6 %,
+à égalité exacte avec Psalm configuré, et Semgrep le battait à 82,6 %.** Mesure de référence,
+horodatée, conservée ci-dessous.
+
+J'ai ensuite corrigé le moteur **précisément sur les cas où il perdait** : appels statiques,
+`self::`, `call_user_func`, littéraux de tableau, propriétés d'objet, fermetures. D'où les
+91,3 %.
+
+Psalm et Semgrep n'ont pas eu cette possibilité. Ce tableau ne compare donc pas la qualité de
+trois outils : il mesure **à quel point j'ai ajusté le mien à mon propre jeu d'essai.** C'est du
+surapprentissage au banc, assumé et déclaré.
+
+| Mesure | sqlguard | psalm configuré | semgrep |
+|---|---|---|---|
+| Corpus durci, **avant** correctifs | 69,6 % | 69,6 % | 82,6 % |
+| Corpus durci, **après** correctifs ciblés | 91,3 % | 69,6 % | 82,6 % |
+
+La seule lecture défendable : **un corpus dit ce qu'un outil rate, il ne dit pas qu'un outil est
+meilleur.** La valeur de ce travail est la liste des angles morts, pas le classement.
 
 ## Lisez d'abord ceci : le 100 % de sqlguard ne veut presque rien dire
 
@@ -87,6 +109,32 @@ caractères de la connexion et reste contournable. **Mon corpus était faux et m
 `addslashes` comme un assainisseur** — un faux négatif que seule la comparaison a révélé. Les
 deux ont été corrigés, le cas est devenu `tp-addslashes-insuffisant`, et c'est aujourd'hui l'un
 des 9 vrais positifs. Sans cette comparaison, le défaut serait toujours là.
+
+## Les angles morts, par outil — c'est la partie utile
+
+Chaque outil rate des choses différentes. Un lecteur qui choisit un outil devrait lire ceci
+plutôt que les pourcentages.
+
+| Construction | sqlguard | psalm configuré | semgrep |
+|---|---|---|---|
+| Conteneur d'injection de dépendances | trouve | **rate** | trouve |
+| `call_user_func('nom', …)` | trouve | **rate** | trouve |
+| Fermeture appelée localement | trouve | **rate** | trouve |
+| Propriété d'objet écrite ailleurs | trouve | trouve | trouve |
+| `$_SERVER['HTTP_*']` | trouve | **rate** | **rate** |
+| `global $x` | **rate** | **rate** | **rate** |
+| Variables variables `$$name` | **rate** | **rate** | **rate** |
+| Cast `(int)` reconnu comme sûr | oui | oui | **non → faux positif** |
+| `$db->quote()` reconnu comme sûr | oui | oui | **non → faux positif** |
+| Assaini dans toutes les branches | oui | oui | **non → faux positif** |
+
+Deux constructions échappent **aux trois outils** : `global` et les variables variables. Un
+lecteur qui en a dans son code doit savoir qu'aucune analyse statique disponible ne le couvre.
+sqlguard les déclare au moins comme limites d'analyse ; il ne rend pas un vert trompeur.
+
+Les trois faux positifs de Semgrep viennent tous du même choix de conception : il travaille par
+motif et ne modélise pas les assainisseurs. Ce n'est pas un défaut d'implémentation, c'est le prix
+d'une couverture multi-langages que sqlguard n'aura jamais.
 
 ## Ce que cette mesure ne dit pas
 

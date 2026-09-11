@@ -31,6 +31,10 @@ final class Propagate
     private bool $emit = true;
     /** @var array<string,\SqlGuard\Engine\Domain\FunctionSummary> */
     private array $summaries = [];
+    /** @var array<string,true> */
+    private array $taintedProperties = [];
+    /** @var array<string,Node\FunctionLike> fermetures liees a une variable */
+    private array $closureBindings = [];
     /** Sinks atteints par le parametre en cours d'analyse, en mode resume. */
     private array $collectedSinks = [];
     private bool $returnReached = false;
@@ -53,6 +57,12 @@ final class Propagate
     public function withSummaries(array $summaries): void
     {
         $this->summaries = $summaries;
+    }
+
+    /** @param array<string,true> $props side_taints (AD-6), indexes classe::prop */
+    public function withTaintedProperties(array $props): void
+    {
+        $this->taintedProperties = $props;
     }
 
     /**
@@ -222,6 +232,23 @@ final class Propagate
         if ($stmt instanceof Stmt\Block) {
             return $this->walk($stmt->stmts, $state, $fqn, $file);
         }
+
+        // `global $x` importe une variable dont le flux vient d'ailleurs : non
+        // suivi, mais DECLARE. Un manque silencieux serait pire qu'un manque
+        // annonce (NFR-6).
+        if ($stmt instanceof Stmt\Global_) {
+            foreach ($stmt->vars as $v) {
+                if ($v instanceof Expr\Variable && is_string($v->name)) {
+                    $state->set(AccessPath::variable($v->name), Taint::unknown());
+                }
+            }
+            $this->limits->record(
+                LimitRecorder::UNKNOWN_CALLEE,
+                'variable importee par `global` : flux non suivi',
+                $this->pos($stmt, $file),
+            );
+            return $state;
+        }
         if ($stmt instanceof Stmt\Return_ && $stmt->expr !== null) {
             $this->inspectExpr($stmt->expr, $state, $fqn, $file);
             // La valeur sort du symbole : l'evaluer consigne les appels non
@@ -240,6 +267,22 @@ final class Propagate
 
     private function assign(Expr $target, Expr $value, TaintState $state, string $fqn, string $file): void
     {
+        // `$$name = ...` : la cible n'est pas connue statiquement. On ne devine
+        // pas, on consigne (AD-15), sinon le manque serait invisible.
+        if ($target instanceof Expr\Variable && !is_string($target->name)) {
+            $this->limits->record(
+                LimitRecorder::DYNAMIC_CALL,
+                'affectation a une variable variable : cible non determinable',
+                $this->pos($target, $file),
+            );
+            return;
+        }
+        // `$f = function (...) { ... }` : on retient la fermeture pour pouvoir
+        // analyser son corps quand `$f(...)` est appelee.
+        if (($value instanceof Expr\Closure || $value instanceof Expr\ArrowFunction)
+            && $target instanceof Expr\Variable && is_string($target->name)) {
+            $this->closureBindings[$target->name] = $value;
+        }
         $path = $this->pathOf($target, $state, $file);
         if ($path === null) {
             return;
@@ -339,6 +382,18 @@ final class Propagate
             return Taint::clean();
         }
 
+        // litteral de tableau : union des marques de ses elements. Sans cela,
+        // `$row = ['q' => $_GET['q']]` produisait une valeur propre.
+        if ($e instanceof Expr\Array_) {
+            $t = Taint::clean();
+            foreach ($e->items as $item) {
+                if ($item instanceof Node\ArrayItem) {
+                    $t = $t->union($this->evaluate($item->value, $state, $fqn, $file));
+                }
+            }
+            return $t;
+        }
+
         // cast sur type sur : rompt la propagation
         if ($e instanceof Expr\Cast) {
             // Les casts numeriques et booleens rendent la valeur inoffensive pour
@@ -369,6 +424,17 @@ final class Propagate
         if ($e instanceof Expr\FuncCall) {
             if ($e->name instanceof Node\Name) {
                 $fn = strtolower($e->name->toString());
+                // Natives qui renvoient toujours un entier ou un booleen :
+                // elles ne peuvent pas porter de marque, et les compter comme
+                // « non suivies » noyait les vraies limites sous du bruit.
+                if (in_array($fn, [
+                    'count', 'sizeof', 'strlen', 'mb_strlen', 'strpos', 'strrpos', 'stripos',
+                    'is_array', 'is_string', 'is_int', 'is_numeric', 'is_scalar', 'is_null',
+                    'isset', 'empty', 'in_array', 'array_key_exists', 'str_contains',
+                    'str_starts_with', 'str_ends_with', 'preg_match', 'defined',
+                ], true)) {
+                    return Taint::clean();
+                }
                 if (isset(Vocabulary::SANITIZERS[$fn])) {
                     // Assainisseur : rompt la propagation UNIQUEMENT parce que sa
                     // valeur de retour est ici consommee.
@@ -382,13 +448,32 @@ final class Propagate
                     }
                     return $t;
                 }
-                if (in_array($fn, ['sprintf', 'implode', 'join', 'str_replace', 'trim', 'strtolower', 'strtoupper'], true)) {
+                if (in_array($fn, [
+                    'sprintf', 'vsprintf', 'implode', 'join', 'str_replace', 'trim', 'ltrim', 'rtrim',
+                    'strtolower', 'strtoupper', 'ucfirst', 'lcfirst', 'substr', 'str_pad', 'str_repeat',
+                    'explode', 'array_values', 'array_keys', 'array_map', 'array_filter', 'array_merge',
+                    'array_fill', 'array_slice', 'array_reverse', 'array_unique', 'reset', 'end',
+                    'current', 'json_encode', 'strval', 'number_format', 'nl2br', 'strip_tags',
+                ], true)) {
                     $t = Taint::clean();
                     foreach ($e->args as $a) {
                         if ($a instanceof Node\Arg) { $t = $t->union($this->evaluate($a->value, $state, $fqn, $file)); }
                     }
                     return $t;
                 }
+                // call_user_func('nom', ...) avec un nom litteral : on decale
+                // les arguments d'un cran et on applique le resume de la cible.
+                if (($fn === 'call_user_func' || $fn === 'call_user_func_array')
+                    && isset($e->args[0]) && $e->args[0] instanceof Node\Arg
+                    && $e->args[0]->value instanceof Node\Scalar\String_) {
+                    $target = $this->symbols?->resolveFunction($e->args[0]->value->value);
+                    if ($target !== null && isset($this->summaries[$target])) {
+                        return $this->applySummary(
+                            $this->summaries[$target], $e, $state, $fqn, $file, 1,
+                        );
+                    }
+                }
+
                 // Interprocedural (AD-6) : si le symbole appele est connu et
                 // resume, on applique son resume au lieu de renoncer.
                 $callee = $this->symbols?->resolveFunction($e->name->toString());
@@ -402,7 +487,39 @@ final class Propagate
                 );
                 return Taint::unknown();
             }
+            // Appel d'une fermeture connue : son corps est analyse EN LIGNE,
+            // avec les parametres lies aux arguments. Le sink est attribue au
+            // symbole englobant, ou le code se trouve reellement.
+            if ($e->name instanceof Expr\Variable && is_string($e->name->name)
+                && isset($this->closureBindings[$e->name->name])) {
+                return $this->inlineClosure(
+                    $this->closureBindings[$e->name->name], $e, $state, $fqn, $file,
+                );
+            }
             $this->limits->record(LimitRecorder::DYNAMIC_CALL, 'appel dynamique', $this->pos($e, $file));
+            return Taint::unknown();
+        }
+
+        // appel statique : Cls::methode(...)
+        if ($e instanceof Expr\StaticCall && $e->name instanceof Node\Identifier
+            && $e->class instanceof Node\Name) {
+            $clsName = $e->class->toString();
+            // `self::`, `static::` et `parent::` designent la classe englobante :
+            // sans cette resolution, chaque appel interne comptait comme non suivi.
+            if (in_array(strtolower($clsName), ['self', 'static', 'parent'], true)
+                && str_contains($fqn, '::')) {
+                $clsName = substr($fqn, 0, (int) strpos($fqn, '::'));
+            }
+            $fqnCallee = '\\' . ltrim($clsName, '\\') . '::' . $e->name->toString();
+            if ($this->symbols !== null && $this->symbols->has($fqnCallee)
+                && isset($this->summaries[$fqnCallee])) {
+                return $this->applySummary($this->summaries[$fqnCallee], $e, $state, $fqn, $file);
+            }
+            $this->limits->record(
+                LimitRecorder::UNKNOWN_CALLEE,
+                'appel statique non suivi : ' . $fqnCallee,
+                $this->pos($e, $file),
+            );
             return Taint::unknown();
         }
 
@@ -427,6 +544,18 @@ final class Propagate
                 $this->pos($e, $file),
             );
             return Taint::unknown();
+        }
+
+        // Propriete ecrite avec une valeur marquee ailleurs dans la classe
+        // (side_taints, AD-6). Motif dominant du legacy : `$this->sql = ...`
+        // dans une methode, execute dans une autre.
+        if ($e instanceof Expr\PropertyFetch && $e->name instanceof Node\Identifier
+            && $this->taintedProperties !== [] && str_contains($fqn, '::')) {
+            $class = substr($fqn, 0, (int) strpos($fqn, '::'));
+            $key = $class . '::' . $e->name->toString();
+            if (isset($this->taintedProperties[$key])) {
+                return Taint::tainted('$this->' . $e->name->toString());
+            }
         }
 
         // chemin d'acces connu
@@ -546,6 +675,7 @@ final class Propagate
         TaintState $state,
         string $fqn,
         string $file,
+        int $argOffset = 0,
     ): Taint {
         $result = Taint::clean();
         /** @var list<Node\Arg> $args */
@@ -553,6 +683,9 @@ final class Propagate
             $call->args,
             static fn($a): bool => $a instanceof Node\Arg,
         ));
+        if ($argOffset > 0) {
+            $args = array_slice($args, $argOffset);
+        }
 
         foreach ($args as $i => $arg) {
             $argTaint = $this->evaluate($arg->value, $state, $fqn, $file);
@@ -592,6 +725,38 @@ final class Propagate
             $result = $result->union(Taint::tainted($sum->symbolFqn . ' (retour)'));
         }
         return $result;
+    }
+
+
+    /**
+     * Analyse le corps d'une fermeture au point d'appel, parametres lies aux
+     * arguments. Les variables capturees par `use` gardent leur marque : c'est
+     * exactement ce qui rend une fermeture dangereuse en legacy.
+     */
+    private function inlineClosure(
+        Node\FunctionLike $closure,
+        Expr\FuncCall $call,
+        TaintState $state,
+        string $fqn,
+        string $file,
+    ): Taint {
+        $inner = $state->copy();
+        /** @var list<Node\Arg> $args */
+        $args = array_values(array_filter($call->args, static fn($a): bool => $a instanceof Node\Arg));
+        foreach ($closure->getParams() as $i => $p) {
+            if ($p->var instanceof Expr\Variable && is_string($p->var->name)) {
+                $t = isset($args[$i])
+                    ? $this->evaluate($args[$i]->value, $state, $fqn, $file)
+                    : Taint::unknown();
+                $inner->set(AccessPath::variable($p->var->name), $t, $this->pos($call, $file));
+            }
+        }
+        $body = $closure instanceof Expr\ArrowFunction ? [] : ($closure->getStmts() ?? []);
+        if ($closure instanceof Expr\ArrowFunction) {
+            return $this->evaluate($closure->expr, $inner, $fqn, $file);
+        }
+        $this->walk($body, $inner, $fqn, $file);
+        return Taint::unknown();
     }
 
     private function calleeFile(string $calleeFqn, string $fallback): string

@@ -53,11 +53,13 @@ final class Scanner
         }
 
         // Passe 3 — resumes interproceduraux, SCC en ordre topologique inverse.
-        $summaries = (new Summarize($symbols, $this->rulePack, $limits))->run();
+        $summarize = new Summarize($symbols, $this->rulePack, $limits);
+        $summaries = $summarize->run();
 
         // Passe 4 — propagation et emission.
         $propagate = new Propagate($this->rulePack, $limits, $symbols);
         $propagate->withSummaries($summaries);
+        $propagate->withTaintedProperties($summarize->taintedProperties());
         foreach ($asts as $canonical => $ast) {
             $propagate->analyseFile($ast, $canonical);
         }

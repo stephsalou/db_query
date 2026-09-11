@@ -27,14 +27,21 @@ final class TaintState
         if (isset($this->map[$p->key()])) {
             return $this->map[$p->key()];
         }
-        // un conteneur agrege couvre ses sous-chemins
+        // Un conteneur couvre ses sous-chemins : si `$row` est marque, alors
+        // `$row['q']` l'est aussi. Sans cela, `$row = ['q' => $_GET['q']]`
+        // suivi de `$row['q']` perdait la marque en silence.
         $agg = AccessPath::aggregate($p->root)->key();
-        return $this->map[$agg] ?? Taint::clean();
+        if (isset($this->map[$agg])) { return $this->map[$agg]; }
+        $root = AccessPath::variable($p->root)->key();
+        return $this->map[$root] ?? Taint::clean();
     }
 
     public function originOf(AccessPath $p): ?Position
     {
-        return $this->origin[$p->key()] ?? $this->origin[AccessPath::aggregate($p->root)->key()] ?? null;
+        return $this->origin[$p->key()]
+            ?? $this->origin[AccessPath::aggregate($p->root)->key()]
+            ?? $this->origin[AccessPath::variable($p->root)->key()]
+            ?? null;
     }
 
     public function copy(): self

@@ -218,8 +218,22 @@ check('le corpus respecte rappel >= 85 % et FP <= 3/10kLOC', function () use ($r
     if (!$r['nfr2_respecte']) {
         throw new \Exception("rappel={$r['recall']} fp/10k={$r['fp_per_10kloc']}");
     }
-    same(0, $r['fn'], 'manques');
+    // On n'exige PAS zero manque : cela inciterait a garder le corpus facile.
+    // On exige le seuil NFR-2 et zero faux positif, qui sont les invariants.
     same(0, $r['fp'], 'faux positifs');
+});
+check('tout manque connu est declare comme limite, jamais silencieux (NFR-6)', function () use ($pack) {
+    // `global` et les variables variables ne sont pas suivis. L'outil doit le
+    // DIRE : un manque annonce vaut infiniment mieux qu'un vert trompeur.
+    foreach ([
+        '<?php function go(PDO $d){ global $q; return $d->query("S ".$q); }',
+        '<?php function go(PDO $d){ $n="q"; $$n=$_GET["q"]; return $d->query("S ".$q); }',
+    ] as $code) {
+        $r = sgScan(fixture($code), $pack);
+        same(0, count($r->alerts()), 'aucune alerte attendue sur ce motif non suivi');
+        same(false, $r->isComplete(), 'le rapport doit se declarer incomplet');
+        same(true, count($r->toArray()['limits']) > 0, 'une limite doit etre consignee');
+    }
 });
 
 echo "\n-- dogfooding : le defaut historique de ce depot --\n";
@@ -327,6 +341,44 @@ check('les ordinaux viennent du parcours prefixe, pas du chemin de flux (AD-5)',
     $ords = array_map(fn($x) => $x->sinkRef->ordinal, $r->alerts());
     sort($ords);
     same([0, 1], $ords);
+});
+
+echo "\n-- constructions de vrai legacy --\n";
+check('propriete ecrite dans une methode, executee dans une autre (side_taints AD-6)', function () use ($pack) {
+    $r = sgScan(fixture('<?php class R { private string $s=""; public function b(){ $this->s="S ".$_GET["a"]; } public function r(PDO $d){ return $d->query($this->s); } }'), $pack);
+    same(1, count($r->alerts()));
+    same('\\R::r', $r->alerts()[0]->sinkRef->symbolFqn);
+});
+check('appel statique resolu', function () use ($pack) {
+    $r = sgScan(fixture('<?php class Q { public static function run(PDO $d,string $s){ return $d->query($s); } } function g(PDO $d){ return Q::run($d, "S ".$_GET["q"]); }'), $pack);
+    same(1, count($r->alerts()));
+    same('\\Q::run', $r->alerts()[0]->sinkRef->symbolFqn);
+});
+check('self:: resolu vers la classe englobante', function () use ($pack) {
+    $r = sgScan(fixture('<?php class Q { private static function s(string $x){ return intval($x); } public function r(PDO $d){ return $d->query("S ".self::s($_GET["i"])); } }'), $pack);
+    same(0, count($r->alerts()), 'self::s assainit, aucune alerte attendue');
+});
+check('call_user_func avec cible litterale', function () use ($pack) {
+    $r = sgScan(fixture('<?php function sink(PDO $d,string $s){ return $d->query($s); } function g(PDO $d){ return call_user_func("sink", $d, "S ".$_GET["q"]); }'), $pack);
+    same(1, count($r->alerts()));
+});
+check('litteral de tableau : la marque de ses elements se propage', function () use ($pack) {
+    $r = sgScan(fixture('<?php function g(PDO $d){ $r=["q"=>$_GET["q"]]; return $d->query("S ".$r["q"]); }'), $pack);
+    same(1, count($r->alerts()));
+});
+check('fermeture appelee avec une valeur propre : aucun faux positif', function () use ($pack) {
+    $r = sgScan(fixture('<?php function g(PDO $d){ $f=function(string $s) use ($d){ return $d->query($s); }; return $f("SELECT 1"); }'), $pack);
+    same(0, count($r->alerts()));
+});
+check('les sondes de resume ne polluent pas les limites rendues', function () use ($pack) {
+    // Une fonction a 3 parametres etait sondee 3 fois, multipliant chaque
+    // limite par 3 dans le rapport rendu a l utilisateur.
+    $r = sgScan(fixture('<?php function g(PDO $d, $a, $b, $c){ return inconnue($a, $b, $c); }'), $pack);
+    $details = array_column($r->toArray()['limits'], 'detail');
+    $counts = array_count_values($details);
+    foreach ($counts as $d => $n) {
+        if ($n > 1) { throw new \Exception("limite dupliquee $n fois : $d"); }
+    }
 });
 
 echo "\n$passed reussis, $failed echoues\n";

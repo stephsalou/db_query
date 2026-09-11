@@ -1,24 +1,37 @@
 {
-    "cases": 23,
-    "loc": 123,
+    "cases": 35,
+    "loc": 192,
     "tools": {
         "sqlguard": {
             "disponible": true,
-            "tp": 13,
-            "fn": 0,
+            "tp": 21,
+            "fn": 2,
             "fp": 0,
-            "rappel": 1,
+            "rappel": 0.913,
             "fp_per_10kloc": 0,
-            "ecarts": []
+            "ecarts": [
+                "manque:hard-global",
+                "manque:hard-variable-variable"
+            ]
         },
         "psalm-defaut": {
             "disponible": true,
             "tp": 0,
-            "fn": 13,
+            "fn": 23,
             "fp": 0,
             "rappel": 0,
             "fp_per_10kloc": 0,
             "ecarts": [
+                "manque:hard-assaini-une-branche",
+                "manque:hard-call-user-func",
+                "manque:hard-conteneur-di",
+                "manque:hard-element-tableau",
+                "manque:hard-fermeture",
+                "manque:hard-global",
+                "manque:hard-heredoc",
+                "manque:hard-methode-statique",
+                "manque:hard-propriete-objet",
+                "manque:hard-variable-variable",
                 "manque:tp-addslashes-insuffisant",
                 "manque:tp-boucle",
                 "manque:tp-branche-union",
@@ -36,27 +49,36 @@
         },
         "psalm-configure": {
             "disponible": true,
-            "tp": 11,
-            "fn": 2,
+            "tp": 16,
+            "fn": 7,
             "fp": 0,
-            "rappel": 0.8462,
+            "rappel": 0.6957,
             "fp_per_10kloc": 0,
             "ecarts": [
+                "manque:hard-call-user-func",
+                "manque:hard-conteneur-di",
+                "manque:hard-fermeture",
+                "manque:hard-global",
+                "manque:hard-variable-variable",
                 "manque:tp-server-header",
                 "manque:tp-server-source"
             ]
         },
         "semgrep": {
             "disponible": true,
-            "tp": 11,
-            "fn": 2,
-            "fp": 3,
-            "rappel": 0.8462,
-            "fp_per_10kloc": 243.9,
+            "tp": 19,
+            "fn": 4,
+            "fp": 5,
+            "rappel": 0.8261,
+            "fp_per_10kloc": 260.42,
             "ecarts": [
                 "faux+:clean-cast-float",
                 "faux+:clean-cast-int",
                 "faux+:clean-quote",
+                "faux+:hard-assaini-toutes-branches",
+                "manque:hard-global",
+                "faux+:hard-tableau-callables",
+                "manque:hard-variable-variable",
                 "manque:tp-server-header",
                 "manque:tp-server-source"
             ]

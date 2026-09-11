@@ -1,0 +1,11 @@
+{
+  "expected": [
+    {
+      "rule_id": "sql-injection-concat-pdo",
+      "symbol_fqn": "\\go",
+      "sink_kind": "pdo.query",
+      "ordinal": 0
+    }
+  ],
+  "note": "Verite terrain = jugement d'expert. Ce cas EST vulnerable, meme si aucun outil mesure ne le trouve."
+}
