@@ -1,0 +1,6 @@
+{
+    "name": "sqlguard/fixture-medium",
+    "description": "Palier moyen du banc de performance sqlguard",
+    "require": { "laravel/framework": "^11.0" },
+    "config": { "allow-plugins": false }
+}

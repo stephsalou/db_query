@@ -1,0 +1,42 @@
+#!/usr/bin/env php
+<?php declare(strict_types=1);
+require __DIR__ . '/../../../vendor/autoload.php';
+
+$root = dirname(__DIR__, 4);
+$base = getenv('SQLGUARD_BENCH_DIR') ?: '/tmp/sgbench';
+
+// Depots de reference : paquets Composer a version figee, reinstallables par
+// un tiers avec les composer.json de corpus/bench-fixtures/.
+$targets = [
+    'petit'  => ['path' => "$base/small/vendor",  'source' => 'nikic/php-parser 5.8.0'],
+    'moyen'  => ['path' => "$base/medium/vendor", 'source' => 'laravel/framework ^11 et ses dependances'],
+    'grand'  => ['path' => $base,                 'source' => 'les trois arbres cumules (php-parser + laravel + symfony ^6.4)'],
+];
+
+$r = (new SqlGuard\Bench\PerformanceHarness($targets, $root . '/rules/manifest.json'))->run();
+
+printf("Banc de performance sqlguard %s — %s\n", $r['outil'], $r['date']);
+printf("PHP %s · %s\n", $r['php'], $r['plateforme']);
+printf("%s\n", str_repeat('=', 92));
+printf("%-8s %10s %8s %9s %12s %10s %8s %9s\n",
+    'cible', 'lignes', 'fichiers', 'secondes', 'lignes/s', 'memoire Mo', 'alertes', 'limites');
+printf("%s\n", str_repeat('-', 92));
+foreach ($r['cibles'] as $name => $c) {
+    if (!$c['disponible']) {
+        printf("%-8s  non disponible (%s)\n", $name, $c['source']);
+        continue;
+    }
+    printf("%-8s %10d %8d %9.2f %12d %10.1f %8d %9d\n",
+        $name, $c['loc'], $c['fichiers'], $c['secondes'], $c['lignes_par_sec'],
+        $c['pic_memoire_mo'], $c['alertes'], $c['limites']);
+}
+printf("%s\n", str_repeat('=', 92));
+foreach ($r['cibles'] as $name => $c) {
+    if ($c['disponible']) { printf("  %-8s %s\n", $name, $c['source']); }
+}
+
+file_put_contents(
+    $root . '/corpus/performance.json',
+    json_encode($r, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n",
+);
+echo "\nMesures ecrites dans corpus/performance.json\n";

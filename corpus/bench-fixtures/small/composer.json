@@ -1,0 +1,6 @@
+{
+    "name": "sqlguard/fixture-small",
+    "description": "Palier petit du banc de performance sqlguard",
+    "require": { "nikic/php-parser": "5.8.0" },
+    "config": { "allow-plugins": false }
+}

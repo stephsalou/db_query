@@ -1,0 +1,6 @@
+{
+    "name": "sqlguard/fixture-large",
+    "description": "Palier grand du banc de performance sqlguard (cumule avec les deux autres)",
+    "require": { "symfony/symfony": "^6.4" },
+    "config": { "allow-plugins": false }
+}
